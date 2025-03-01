@@ -1,71 +1,90 @@
 import { NextRequest, NextResponse } from "next/server";
 import path from "path";
 import fs from "fs";
+import busboy from "busboy";
 import { Readable } from "stream";
 
 // Helper function to convert ReadableStream to Node.js Readable
-function toNodeReadable(webStream: ReadableStream): Readable {
-  const reader = webStream.getReader();
-  return new Readable({
-    async read() {
-      try {
-        const { done, value } = await reader.read();
-        if (done) {
-          this.push(null); // Signal end of stream
-        } else {
-          this.push(value); // Push data chunk
-        }
-      } catch (err) {
-        console.error("Error reading stream:", err);
-        this.destroy(err as Error); // Handle errors
-      }
-    },
-  });
+async function streamToBuffer(stream: ReadableStream): Promise<Buffer> {
+  const reader = stream.getReader();
+  const chunks: Uint8Array[] = [];
+  
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    chunks.push(value);
+  }
+  
+  return Buffer.concat(chunks);
 }
 
-export const config = {
-  api: {
-    bodyParser: false, // Disable automatic body parsing for file uploads
-  },
-};
+// Helper function to clear a directory
+function clearDirectory(directory: string): void {
+  if (fs.existsSync(directory)) {
+    const files = fs.readdirSync(directory);
+    
+    for (const file of files) {
+      const filePath = path.join(directory, file);
+      
+      // Check if it's a file or directory
+      const stat = fs.statSync(filePath);
+      
+      if (stat.isFile()) {
+        // Delete file
+        fs.unlinkSync(filePath);
+      } else if (stat.isDirectory()) {
+        // Recursively delete directory contents then the directory
+        clearDirectory(filePath);
+        fs.rmdirSync(filePath);
+      }
+    }
+    
+    console.log(`Cleared contents of directory: ${directory}`);
+  }
+}
 
 export async function POST(request: NextRequest) {
   try {
-    // Log headers for debugging
-    console.log("Request Headers:", JSON.stringify(request.headers));
+    // Define uploads directory
+    const uploadsDir = path.join(process.cwd(), "uploads");
+    
+    // Clear the uploads directory if it exists
+    if (fs.existsSync(uploadsDir)) {
+      console.log("Uploads directory exists. Clearing contents...");
+      clearDirectory(uploadsDir);
+    } else {
+      // Create uploads directory if it doesn't exist
+      console.log("Creating uploads directory...");
+      fs.mkdirSync(uploadsDir, { recursive: true });
+    }
 
-    // Validate Content-Type header
+    // Get headers
     const contentType = request.headers.get("content-type");
-    if (!contentType || !contentType.startsWith("multipart/form-data")) {
-      console.error("Invalid Content-Type header:", contentType);
+    if (!contentType || !contentType.includes("multipart/form-data")) {
       return NextResponse.json(
         { message: "Missing or invalid Content-Type header" },
         { status: 400 }
       );
     }
 
-    const busboy = require("busboy");
-    const bb = busboy({ headers: request.headers });
+    // Convert headers to format expected by busboy
+    const headers: Record<string, string> = {};
+    request.headers.forEach((value, key) => {
+      headers[key.toLowerCase()] = value;
+    });
 
-    const uploadsDir = path.join(process.cwd(), "uploads");
-
-    // Ensure the uploads directory exists
-    if (!fs.existsSync(uploadsDir)) {
-      console.log("Creating uploads directory...");
-      fs.mkdirSync(uploadsDir, { recursive: true });
-    }
-
-    let fileName = "";
+    // Convert request body to buffer
+    const buffer = await streamToBuffer(request.body);
 
     return new Promise((resolve, reject) => {
-      bb.on("file", (_, file, info) => {
+      const bb = busboy({ headers });
+      let fileName = "";
+      
+      bb.on("file", (fieldname, file, info) => {
         const { filename, mimeType } = info;
-
-        console.log("File Received:", { filename, mimeType }); // Log file details
-
-        // Validate file type (e.g., allow only images)
+        
+        // Validate file type
         if (!["image/jpeg", "image/png"].includes(mimeType)) {
-          console.error("Invalid file type:", mimeType);
           return resolve(
             NextResponse.json(
               { message: "Invalid file type. Only JPEG and PNG are allowed." },
@@ -73,22 +92,19 @@ export async function POST(request: NextRequest) {
             )
           );
         }
-
-        // Sanitize file name to prevent path traversal attacks
+        
+        // Create sanitized filename
         const safeFileName = Date.now() + "_" + filename.replace(/[^a-zA-Z0-9.-]/g, "_");
         const filePath = path.join(uploadsDir, safeFileName);
         fileName = safeFileName;
-
-        console.log("Saving File To:", filePath); // Log file save path
-
-        // Pipe the incoming file stream to the destination file
+        
+        console.log(`Saving new file: ${filePath}`);
+        // Save file to disk
         file.pipe(fs.createWriteStream(filePath));
       });
-
+      
       bb.on("finish", () => {
-        console.log("Busboy Finished Processing"); // Log when processing is complete
         if (!fileName) {
-          console.error("No file uploaded");
           return resolve(
             NextResponse.json(
               { message: "No file uploaded" },
@@ -96,7 +112,7 @@ export async function POST(request: NextRequest) {
             )
           );
         }
-
+        
         resolve(
           NextResponse.json(
             { message: "File uploaded successfully", fileName },
@@ -104,8 +120,8 @@ export async function POST(request: NextRequest) {
           )
         );
       });
-
-      bb.on("error", (err: any) => {
+      
+      bb.on("error", (err) => {
         console.error("Busboy error:", err);
         reject(
           NextResponse.json(
@@ -114,14 +130,14 @@ export async function POST(request: NextRequest) {
           )
         );
       });
-
-      // Convert request.body (ReadableStream) to Node.js Readable
-      const nodeReadable = toNodeReadable(request.body);
-
-      // Pipe the Node.js Readable stream to busboy
-      nodeReadable.pipe(bb);
+      
+      // Create a readable stream from the buffer and pipe it to busboy
+      const readable = new Readable();
+      readable.push(buffer);
+      readable.push(null);
+      readable.pipe(bb);
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error uploading file:", error);
     return NextResponse.json(
       { message: `Internal server error: ${error.message}` },
