@@ -18,20 +18,22 @@ const Hero = () => {
       alert("Please select a file first!");
       return;
     }
-
+  
     const formData = new FormData();
     formData.append("file", file);
-
+  
     try {
-      const response = await fetch("/src/app/api/upload/route.ts", {
+      const response = await fetch("/api/upload", {
         method: "POST",
         body: formData,
       });
-
+  
       if (response.ok) {
-        alert(`File uploaded successfully: ${file.name}`);
+        const data = await response.json();
+        alert(`File uploaded successfully: ${data.fileName}`);
       } else {
-        alert("Failed to upload file. Please try again.");
+        const errorData = await response.json();
+        alert(`Failed to upload file: ${errorData.message}`);
       }
     } catch (error) {
       console.error("Error uploading file:", error);
