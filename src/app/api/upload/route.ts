@@ -18,7 +18,7 @@ async function streamToBuffer(stream: ReadableStream): Promise<Buffer> {
   return Buffer.concat(chunks);
 }
 
-// Helper function to clear a directory
+
 function clearDirectory(directory: string): void {
   if (fs.existsSync(directory)) {
     const files = fs.readdirSync(directory);
@@ -26,39 +26,30 @@ function clearDirectory(directory: string): void {
     for (const file of files) {
       const filePath = path.join(directory, file);
       
-      // Check if it's a file or directory
+
       const stat = fs.statSync(filePath);
       
       if (stat.isFile()) {
         // Delete file
         fs.unlinkSync(filePath);
       } else if (stat.isDirectory()) {
-        // Recursively delete directory contents then the directory
+
         clearDirectory(filePath);
         fs.rmdirSync(filePath);
       }
     }
     
-    console.log(`Cleared contents of directory: ${directory}`);
   }
 }
 
 export async function POST(request: NextRequest) {
   try {
-    // Define uploads directory
     const uploadsDir = path.join(process.cwd(), "uploads");
-    
-    // Clear the uploads directory if it exists
     if (fs.existsSync(uploadsDir)) {
-      console.log("Uploads directory exists. Clearing contents...");
       clearDirectory(uploadsDir);
     } else {
-      // Create uploads directory if it doesn't exist
-      console.log("Creating uploads directory...");
       fs.mkdirSync(uploadsDir, { recursive: true });
     }
-
-    // Get headers
     const contentType = request.headers.get("content-type");
     if (!contentType || !contentType.includes("multipart/form-data")) {
       return NextResponse.json(
@@ -67,13 +58,11 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    // Convert headers to format expected by busboy
     const headers: Record<string, string> = {};
     request.headers.forEach((value, key) => {
       headers[key.toLowerCase()] = value;
     });
 
-    // Convert request body to buffer
     const buffer = await streamToBuffer(request.body);
 
     return new Promise((resolve, reject) => {
@@ -83,7 +72,7 @@ export async function POST(request: NextRequest) {
       bb.on("file", (fieldname, file, info) => {
         const { filename, mimeType } = info;
         
-        // Validate file type
+
         if (!["image/jpeg", "image/png"].includes(mimeType)) {
           return resolve(
             NextResponse.json(
@@ -93,13 +82,13 @@ export async function POST(request: NextRequest) {
           );
         }
         
-        // Create sanitized filename
+
         const safeFileName = Date.now() + "_" + filename.replace(/[^a-zA-Z0-9.-]/g, "_");
         const filePath = path.join(uploadsDir, safeFileName);
         fileName = safeFileName;
         
         console.log(`Saving new file: ${filePath}`);
-        // Save file to disk
+
         file.pipe(fs.createWriteStream(filePath));
       });
       
@@ -131,7 +120,6 @@ export async function POST(request: NextRequest) {
         );
       });
       
-      // Create a readable stream from the buffer and pipe it to busboy
       const readable = new Readable();
       readable.push(buffer);
       readable.push(null);

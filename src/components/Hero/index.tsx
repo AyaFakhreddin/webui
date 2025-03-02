@@ -4,7 +4,7 @@ import React, { useState } from "react";
 
 const Hero = () => {
   const [file, setFile] = useState<File | null>(null);
-
+  
   // Handle file selection
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
@@ -58,15 +58,57 @@ const Hero = () => {
                 Use AI-powered detection to reveal fake images and concealed data—ensuring digital media integrity and security. Try it now!
                 </p>
                 {/* File Upload Section */}
-                <div className="mt-12">
-                  <input
-                    type="file"
-                    className="block w-full px-6 py-3 text-base text-gray-800 bg-gray-200 rounded-lg dark:bg-gray-700 dark:text-white dark:border-gray-600 focus:outline-none focus:ring-2 focus:ring-primary focus:border-transparent"                    accept=".jpg"
-                    onChange={handleFileChange}
-                  />
+                <div className="mt-12 flex flex-col items-center justify-center space-y-6">
+                  {/* Drag and Drop Area */}
+                  <div
+                    className="relative flex flex-col items-center justify-center w-full max-w-xlg p-8 space-y-4 text-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer dark:border-gray-600 hover:border-primary transition-colors duration-300 ease-in-out"
+                  >
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      className="w-12 h-12 text-gray-400 dark:text-gray-500"
+                      fill="none"
+                      viewBox="0 0 24 24"
+                      stroke="currentColor"
+                    >
+                      <path
+                        strokeLinecap="round"
+                        strokeLinejoin="round"
+                        strokeWidth={2}
+                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 18h6"
+                      />
+                    </svg>
+                    <p className="text-sm text-gray-500 dark:text-gray-400">
+                      Drag and drop your file here or{' '}
+                      <span className="font-medium text-primary underline cursor-pointer">browse</span>
+                    </p>
+                    <input
+                      type="file"
+                      accept=".jpg"
+                      className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                      onChange={handleFileChange}
+                    />
+                  </div>
+
+                  {/* File Name Display */}
+                  {file && (
+                    <div className="flex items-center justify-between w-full max-w-md p-4 bg-gray-100 rounded-lg dark:bg-gray-800">
+                      <span className="text-sm font-medium text-gray-700 truncate dark:text-gray-300">
+                        {file.name}
+                      </span>
+                      <button
+                        className="text-sm font-medium text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500"
+                        onClick={() => setFile(null)}
+                      >
+                        x
+                      </button>
+                    </div>
+                  )}
+
+                  {/* Upload Button */}
                   <button
-                    className="mt-4 rounded-sm bg-primary px-8 py-4 text-base font-semibold text-white duration-300 ease-in-out hover:bg-primary/80"
+                    className="w-full max-w-md px-8 py-4 text-base font-semibold text-white bg-primary rounded-lg shadow-md hover:bg-primary/80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
                     onClick={handleUpload}
+                    disabled={!file}
                   >
                     Upload
                   </button>
