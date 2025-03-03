@@ -4,12 +4,14 @@ import React, { useState } from "react";
 
 const Hero = () => {
   const [file, setFile] = useState<File | null>(null);
+  const [preview, setPreview] = useState<string | null>(null); // State for image preview
   
   // Handle file selection
   const handleFileChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const selectedFile = event.target.files?.[0];
     if (selectedFile) {
       setFile(selectedFile);
+      setPreview(URL.createObjectURL(selectedFile)); // Generate preview URL
     }
   };
 
@@ -63,31 +65,45 @@ const Hero = () => {
                   <div
                     className="relative flex flex-col items-center justify-center w-full max-w-xlg p-8 space-y-4 text-center border-2 border-dashed border-gray-300 rounded-lg cursor-pointer dark:border-gray-600 hover:border-primary transition-colors duration-300 ease-in-out"
                   >
-                    <svg
-                      xmlns="http://www.w3.org/2000/svg"
-                      className="w-12 h-12 text-gray-400 dark:text-gray-500"
-                      fill="none"
-                      viewBox="0 0 24 24"
-                      stroke="currentColor"
-                    >
-                      <path
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                        strokeWidth={2}
-                        d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 18h6"
-                      />
-                    </svg>
-                    <p className="text-sm text-gray-500 dark:text-gray-400">
-                      Drag and drop your file here or{' '}
-                      <span className="font-medium text-primary underline cursor-pointer">browse</span>
-                    </p>
+                    {/* Hidden File Input */}
                     <input
                       type="file"
-                      accept=".jpg"
+                      accept="image/*"
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       onChange={handleFileChange}
                     />
-                  </div>
+                    {/* Show Image Preview Inside Drop Area */}
+                    {preview ? (
+                      <img
+                        src={preview}
+                        alt="Uploaded Preview"
+                        className="w-full h-auto max-h-64 object-contain rounded-lg shadow-lg"
+                      />
+                    ) : (
+                      <>
+                    
+                        <svg
+                          xmlns="http://www.w3.org/2000/svg"
+                          className="w-12 h-12 text-gray-400 dark:text-gray-500"
+                          fill="none"
+                          viewBox="0 0 24 24"
+                          stroke="currentColor"
+                        >
+                        <path
+                          strokeLinecap="round"
+                          strokeLinejoin="round"
+                          strokeWidth={2}
+                          d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M9 18h6"
+                        />
+                      </svg>
+                      <p className="text-sm text-gray-500 dark:text-gray-400">
+                        Drag and drop your file here or{' '}
+                        <span className="font-medium text-primary underline cursor-pointer">browse</span>
+                      </p>
+                    </>
+                  )}
+                </div>
+                  
 
                   {/* File Name Display */}
                   {file && (
@@ -97,21 +113,38 @@ const Hero = () => {
                       </span>
                       <button
                         className="text-sm font-medium text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-500"
-                        onClick={() => setFile(null)}
-                      >
+                        onClick={() => {
+                          setFile(null);
+                          setPreview(null);
+                        }}
+                      > 
                         x
                       </button>
                     </div>
                   )}
 
                   {/* Upload Button */}
-                  <button
-                    className="w-full max-w-md px-8 py-4 text-base font-semibold text-white bg-primary rounded-lg shadow-md hover:bg-primary/80 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed"
-                    onClick={handleUpload}
-                    disabled={!file}
-                  >
-                    Upload
-                  </button>
+                  <div className="flex justify-center space-x-4">
+                    {/* Button for Detecting Fake Images */}
+                    <button
+                      className="min-w-[150px] px-10 py-4 text-lg font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      onClick={() => alert("Detecting fake image...")}
+                      disabled={!file} // Disable if no file is selected
+                    >
+                      Fake Detect
+                    </button>
+
+                    {/* Button for Detecting Steganography */}
+                    <button
+                      className="min-w-[150px] px-10 py-4 text-lg font-semibold text-white bg-blue-600 rounded-lg shadow-md hover:bg-blue-500 focus:outline-none focus:ring-2 focus:ring-blue-600 focus:ring-offset-2 transition-all duration-300 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed whitespace-nowrap"
+                      onClick={() => alert("Detecting steganography...")}
+                      disabled={!file} // Disable if no file is selected
+                    >
+                      Stegano Detect
+                    </button>
+
+                    
+                  </div>
                 </div>
             </div>
             </div>
@@ -364,3 +397,6 @@ const Hero = () => {
 };
 
 export default Hero;
+
+
+ 
